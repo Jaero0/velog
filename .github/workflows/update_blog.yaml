@@ -1,42 +1,48 @@
 name: Update Blog Posts
-  
 
 on:
   push:
-      branches:
-        - main # 또는 워크플로우를 트리거하고 싶은 브랜치 이름
-  workflow_dispatch:	# 수동 실행 트리거 추가
+    branches:
+      - main
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # 매일 자정에 실행
+    - cron: '0 0 * * *'
 
 jobs:
   update_blog:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set time zone
-      run: |
-        sudo ln -sf /usr/share/zoneinfo/Europe/Spain /etc/localtime
-        echo "Europe/Madrid" | sudo tee /etc/timezone
-        date
+      - name: Set time zone
+        run: |
+          sudo ln -sf /usr/share/zoneinfo/Europe/Madrid /etc/localtime
+          echo "Europe/Madrid" | sudo tee /etc/timezone
+          date
 
-    - name: Push changes
-      run: |
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git push https://${{ secrets.GH_PAT }}@github.com/Jaero0/velog.git
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          pip install feedparser gitpython
 
-    - name: Install dependencies
-      run: |
-        pip install feedparser gitpython
+      - name: Run script
+        run: |
+          python scripts/update_blog.py
 
-    - name: Run script
-      run: python scripts/update_blog.py
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          git add .
+          git commit -m "Update blog posts" || echo "No changes to commit"
+
+      - name: Push changes
+        run: |
+          git push https://${{ secrets.GH_PAT }}@github.com/Jaero0/velog.git HEAD:main
